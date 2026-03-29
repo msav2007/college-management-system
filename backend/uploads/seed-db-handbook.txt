@@ -1,0 +1,6 @@
+Database Systems Revision Notes
+
+1. ER modeling should capture entities, relationships, and constraints.
+2. Normalize schemas to reduce redundancy and protect data integrity.
+3. Create indexes only for high-value query paths.
+4. Use transactions for multi-step academic workflows.

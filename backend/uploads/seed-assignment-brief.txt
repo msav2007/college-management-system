@@ -1,0 +1,4 @@
+Assignment: Normalization Case Study
+
+Prepare a clean third-normal-form design for a college admissions workflow.
+Document the entities, keys, assumptions, and at least three integrity rules.

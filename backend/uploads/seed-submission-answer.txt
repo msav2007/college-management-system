@@ -1,0 +1,4 @@
+Submission Summary
+
+The admissions workflow was decomposed into applicant, application, document,
+program, and payment entities with foreign keys enforcing each relationship.

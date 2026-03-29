@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | CMS</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <script defer src="js/app.js"></script>
+  </head>
+  <body class="auth-page" data-page="login">
+    <main class="login-shell">
+      <section class="login-brand-panel login-left">
+        <div class="login-brand-overlay overlay light-separator" aria-hidden="true"></div>
+        <div class="login-brand-header">
+          <span class="login-brand-badge secure-pill">
+            <span class="cms-mini">CMS</span>
+            <span class="secure-pill-text">SECURE CAMPUS WORKSPACE</span>
+          </span>
+        </div>
+        <div class="login-brand-copy">
+          <h1>College Management System<br />Role-based Access</h1>
+          <p>
+            Secure academic operations for admins, faculty, and students in one centralized platform
+            with role-based access, real-time tracking, and seamless academic workflows.
+          </p>
+        </div>
+        <div class="login-feature-grid feature-cards">
+          <article class="login-feature-card feature-card">
+            <h2>Secure RBAC</h2>
+            <p>Protected access for every campus role.</p>
+          </article>
+          <article class="login-feature-card feature-card">
+            <h2>Academic Workflows</h2>
+            <p>Attendance, exams, materials, and submissions.</p>
+          </article>
+          <article class="login-feature-card feature-card">
+            <h2>Operational Visibility</h2>
+            <p>Clean dashboards with modern SaaS UX.</p>
+          </article>
+        </div>
+        <div class="login-tech-pills">
+          <span class="login-tech-pill">JWT Auth</span>
+          <span class="login-tech-pill">RBAC</span>
+          <span class="login-tech-pill">SQLite</span>
+          <span class="login-tech-pill">Responsive UI</span>
+        </div>
+      </section>
+      <section class="login-form-panel login-right">
+        <div class="login-form-card login-card">
+          <div class="login-form-heading">
+            <span class="login-form-kicker">Welcome Back</span>
+            <h2>Sign in to continue</h2>
+            <p>Choose your role and continue to your workspace.</p>
+          </div>
+          <form id="loginForm" class="login-form">
+            <label class="login-field">
+              <span class="login-field-label">Role</span>
+              <span class="select-wrapper">
+                <select name="role" id="loginRole" required>
+                  <option value="">Select your role</option>
+                  <option value="admin">Admin</option>
+                  <option value="faculty">Faculty</option>
+                  <option value="student">Student</option>
+                </select>
+              </span>
+            </label>
+            <label class="login-field">
+              <span class="login-field-label">Email address</span>
+              <input type="email" name="email" id="loginEmail" placeholder="name@college.edu" required />
+            </label>
+            <label class="login-field">
+              <span class="login-field-label">Password</span>
+              <input type="password" name="password" id="loginPassword" placeholder="Enter your password" required />
+            </label>
+            <button class="button button-primary btn-primary login-submit" type="submit">Sign In</button>
+          </form>
+          <div class="login-secondary-row">
+            <a class="login-secondary-link" href="forgot-password.html">Forgot Password?</a>
+            <a class="button button-secondary login-secondary-button" href="#demoCredentialsTitle">Use Demo Access</a>
+          </div>
+          <div id="authMessage" class="inline-message hidden"></div>
+        </div>
+
+        <section class="login-demo-card" aria-labelledby="demoCredentialsTitle">
+          <div class="login-demo-header">
+            <div>
+              <span class="login-form-kicker">Demo Credentials</span>
+              <h3 id="demoCredentialsTitle">Click any role to autofill</h3>
+            </div>
+            <p>Instant access for testing.</p>
+          </div>
+          <div class="login-demo-grid demo-cards">
+            <button
+              class="login-demo-item demo-card"
+              type="button"
+              data-demo-role="admin"
+              data-demo-email="admin@college.edu"
+              data-demo-password="Admin@123"
+            >
+              <span class="login-demo-role role">Admin</span>
+              <span class="login-demo-email email">admin@college.edu</span>
+              <span class="login-demo-password password">Admin@123</span>
+            </button>
+            <button
+              class="login-demo-item demo-card"
+              type="button"
+              data-demo-role="faculty"
+              data-demo-email="faculty@college.edu"
+              data-demo-password="Faculty@123"
+            >
+              <span class="login-demo-role role">Faculty</span>
+              <span class="login-demo-email email">faculty@college.edu</span>
+              <span class="login-demo-password password">Faculty@123</span>
+            </button>
+            <button
+              class="login-demo-item demo-card"
+              type="button"
+              data-demo-role="student"
+              data-demo-email="student@college.edu"
+              data-demo-password="Student@123"
+            >
+              <span class="login-demo-role role">Student</span>
+              <span class="login-demo-email email">student@college.edu</span>
+              <span class="login-demo-password password">Student@123</span>
+            </button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
