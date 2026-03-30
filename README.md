@@ -11,6 +11,7 @@ A role-based college management system and student management system built with 
 ## Features
 
 ### Admin
+
 - Manage students and faculty records
 - Manage departments, branches, subjects, and faculty assignment
 - Create timetable slots and exam schedules
@@ -20,6 +21,7 @@ A role-based college management system and student management system built with 
 - Delete students with related data cleanup
 
 ### Faculty
+
 - View assigned students and subjects
 - Mark subject-wise attendance
 - Create assignments and upload academic materials
@@ -29,6 +31,7 @@ A role-based college management system and student management system built with 
 - Review outing requests for assigned students
 
 ### Student
+
 - Sign in to a role-based dashboard
 - View subject-wise attendance, timetable, results, and fee status
 - View notices available to their academic mapping
@@ -111,6 +114,7 @@ college-management-system/
 ## Installation
 
 ### Prerequisites
+
 - Node.js 18+ recommended
 - npm
 
@@ -175,19 +179,6 @@ http://localhost:3000
 - Fee tracking and timetable management
 - Assignment submissions with uploaded files
 - Outing request approval workflow
-
-## Screenshots
-
-Recommended repository screenshots to add:
-
-- Login page
-- Admin dashboard
-- Faculty dashboard
-- Student dashboard
-- Attendance management
-- Assignments and submissions
-- Materials library
-- Timetable and fees pages
 
 ## Future Improvements
 
