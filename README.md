@@ -1,10 +1,33 @@
+# Usage & License Notice
+
+This project is created by **M Sri Anshu Venkat**.
+
+Allowed:
+
+- Learning and reference
+- Understanding implementation
+
+Not Allowed:
+
+- Copying and submitting as your own project
+- Renaming and re-uploading
+- Commercial use or resale
+
+Mandatory Credit:
+If you use this project, you MUST give proper credit:
+
+Original Author: M Sri Anshu Venkat
+GitHub: https://github.com/msav2007/college-management-system
+
+Unauthorized use or plagiarism is strictly prohibited and may lead to copyright action.
+
 # College Management System (Role-Based)
 
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square&logo=node.js&logoColor=white)
 ![Express](https://img.shields.io/badge/Express.js-API-000000?style=flat-square&logo=express&logoColor=white)
 ![JWT](https://img.shields.io/badge/Auth-JWT-2563eb?style=flat-square)
 ![RBAC](https://img.shields.io/badge/Security-RBAC-0f172a?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-16a34a?style=flat-square)
+![License](https://img.shields.io/badge/License-Academic%20Use%20Only-dc2626?style=flat-square)
 
 A role-based college management system and student management system built with Node.js, Express, JWT authentication, SQL.js, and a clean admin, faculty, and student dashboard. This project is designed as a production-style college ERP dashboard for academic operations, attendance, assignments, notices, exams, results, fees, materials, timetable management, and outing workflows.
 
@@ -64,51 +87,51 @@ A role-based college management system and student management system built with 
 
 ```text
 college-management-system/
-├── backend/
-│   ├── config/
-│   │   └── db.js
-│   ├── middleware/
-│   │   ├── authMiddleware.js
-│   │   └── roleMiddleware.js
-│   ├── routes/
-│   │   ├── academicRoutes.js
-│   │   ├── assignmentRoutes.js
-│   │   ├── attendanceRoutes.js
-│   │   ├── authRoutes.js
-│   │   ├── facultyRoutes.js
-│   │   ├── materialRoutes.js
-│   │   ├── noticeRoutes.js
-│   │   ├── outingRoutes.js
-│   │   ├── resultRoutes.js
-│   │   ├── studentRoutes.js
-│   │   └── submissionRoutes.js
-│   ├── uploads/
-│   └── server.js
-├── database/
-│   ├── cms.db
-│   └── cms.sql
-├── frontend/
-│   ├── academics.html
-│   ├── assignments.html
-│   ├── attendance.html
-│   ├── dashboard.html
-│   ├── exams.html
-│   ├── faculty.html
-│   ├── fees.html
-│   ├── forgot-password.html
-│   ├── login.html
-│   ├── materials.html
-│   ├── notices.html
-│   ├── outing.html
-│   ├── reset-password.html
-│   ├── students.html
-│   ├── timetable.html
-│   ├── css/
-│   │   └── styles.css
-│   └── js/
-│       └── app.js
-├── package.json
-└── README.md
+|-- backend/
+|   |-- config/
+|   |   `-- db.js
+|   |-- middleware/
+|   |   |-- authMiddleware.js
+|   |   `-- roleMiddleware.js
+|   |-- routes/
+|   |   |-- academicRoutes.js
+|   |   |-- assignmentRoutes.js
+|   |   |-- attendanceRoutes.js
+|   |   |-- authRoutes.js
+|   |   |-- facultyRoutes.js
+|   |   |-- materialRoutes.js
+|   |   |-- noticeRoutes.js
+|   |   |-- outingRoutes.js
+|   |   |-- resultRoutes.js
+|   |   |-- studentRoutes.js
+|   |   `-- submissionRoutes.js
+|   |-- uploads/
+|   `-- server.js
+|-- database/
+|   |-- cms.db
+|   `-- cms.sql
+|-- frontend/
+|   |-- academics.html
+|   |-- assignments.html
+|   |-- attendance.html
+|   |-- dashboard.html
+|   |-- exams.html
+|   |-- faculty.html
+|   |-- fees.html
+|   |-- forgot-password.html
+|   |-- login.html
+|   |-- materials.html
+|   |-- notices.html
+|   |-- outing.html
+|   |-- reset-password.html
+|   |-- students.html
+|   |-- timetable.html
+|   |-- css/
+|   |   `-- styles.css
+|   `-- js/
+|       `-- app.js
+|-- package.json
+`-- README.md
 ```
 
 ## Installation
@@ -213,4 +236,4 @@ Role-based college management system built with Node.js, Express, JWT authentica
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This project is distributed under the Personal Academic Use Only License. See the `LICENSE` file for usage restrictions and credit requirements.
