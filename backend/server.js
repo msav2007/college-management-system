@@ -23,6 +23,8 @@ const PORT = Number(process.env.PORT) || 3000;
 const frontendDir = path.join(__dirname, "..", "frontend");
 const uploadsDir = path.join(__dirname, "uploads");
 
+app.disable("x-powered-by");
+
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }

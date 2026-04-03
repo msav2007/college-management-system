@@ -1,5 +1,6 @@
-const API_BASE = "http://localhost:3000/api";
-const APP_BASE = "http://localhost:3000";
+const APP_BASE =
+  window.location.origin && window.location.origin !== "null" ? window.location.origin : "http://localhost:3000";
+const API_BASE = `${APP_BASE}/api`;
 const TOKEN_KEY = "cms_token";
 const USER_KEY = "cms_user";
 
@@ -97,7 +98,6 @@ const STATE = {
 
 document.addEventListener("DOMContentLoaded", () => {
   initializeApp().catch((error) => {
-    console.error(error);
     showToast(error.message || "Unable to load the application right now.", "error");
   });
 });
@@ -241,6 +241,7 @@ function createTableCard({ title, subtitle = "", headers, rows, emptyMessage = "
     <section class="table-card">
       <div class="table-head">
         <div class="panel-heading">
+          ${subtitle ? `<p class="table-meta">${escapeHtml(subtitle)}</p>` : ""}
           <h2>${escapeHtml(title)}</h2>
         </div>
       </div>
@@ -267,6 +268,7 @@ function panel({ eyebrow = "Overview", title, body, actions = "" }) {
     <section class="panel">
       <div class="split-row panel-head">
         <div class="panel-heading">
+          ${eyebrow ? `<span class="eyebrow">${escapeHtml(eyebrow)}</span>` : ""}
           <h2>${escapeHtml(title)}</h2>
         </div>
         ${actions}
@@ -868,7 +870,7 @@ async function renderDashboardPage() {
   `;
 }
 
-async function renderStudentsPage() {
+async function renderStudentsPageLegacy() {
   const pageContent = document.getElementById("pageContent");
 
   if (STATE.user.role === "faculty") {
@@ -1579,7 +1581,7 @@ async function renderExamsPage() {
   });
 }
 
-async function renderFacultyPage() {
+async function renderFacultyPageLegacy() {
   const pageContent = document.getElementById("pageContent");
   const facultyData = await api("/faculty");
 

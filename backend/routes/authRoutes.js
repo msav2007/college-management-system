@@ -89,8 +89,8 @@ router.post("/forgot-password", (req, res) => {
     `
   ).run(resetToken, expiresAt, user.id);
 
-  const resetLink = `http://localhost:3000/reset-password.html?token=${resetToken}`;
-  console.log(`Password reset link for ${user.email}: ${resetLink}`);
+  const appOrigin = `${req.protocol}://${req.get("host")}`;
+  const resetLink = `${appOrigin}/reset-password.html?token=${resetToken}`;
 
   return res.json({
     message: "Reset link generated (demo mode)",
