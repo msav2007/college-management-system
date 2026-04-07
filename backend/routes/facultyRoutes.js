@@ -144,29 +144,34 @@ router.get("/assigned-students", roleMiddleware("faculty", "admin"), (req, res) 
     students = db
       .prepare(
         `
-          SELECT
-            DISTINCT students.id,
-            students.roll_number,
-            students.registration_number,
-            students.semester,
-            students.section,
-            students.branch_id,
-            users.full_name,
-            users.email,
-            departments.name AS department_name,
-            branches.name AS branch_name
-          FROM students
-          JOIN users ON users.id = students.user_id
-          JOIN departments ON departments.id = students.department_id
-          LEFT JOIN branches ON branches.id = students.branch_id
-          JOIN courses ON courses.department_id = students.department_id
-            AND COALESCE(courses.branch_id, students.branch_id) = students.branch_id
-            AND courses.semester = students.semester
-          WHERE courses.faculty_id = ?
-          ORDER BY users.full_name ASC
-        `
-      )
-      .all(facultyProfile.id);
+        SELECT
+          DISTINCT students.id,
+          students.roll_number,
+          students.registration_number,
+          students.semester,
+          students.section,
+          students.branch_id,
+          COALESCE(students.faculty_id, students.advisor_faculty_id) AS faculty_id,
+          users.full_name,
+          users.email,
+          departments.name AS department_name,
+          branches.name AS branch_name,
+          advisor_user.full_name AS advisor_name
+        FROM students
+        JOIN users ON users.id = students.user_id
+        JOIN departments ON departments.id = students.department_id
+        LEFT JOIN branches ON branches.id = students.branch_id
+        LEFT JOIN faculty advisor ON advisor.id = COALESCE(students.faculty_id, students.advisor_faculty_id)
+        LEFT JOIN users advisor_user ON advisor_user.id = advisor.user_id
+        LEFT JOIN courses ON courses.department_id = students.department_id
+          AND COALESCE(courses.branch_id, students.branch_id) = students.branch_id
+          AND courses.semester = students.semester
+        WHERE COALESCE(students.faculty_id, students.advisor_faculty_id) = ?
+           OR courses.faculty_id = ?
+        ORDER BY users.full_name ASC
+      `
+    )
+      .all(facultyProfile.id, facultyProfile.id);
   }
 
   return res.json({ students });
@@ -233,10 +238,10 @@ router.get("/courses", roleMiddleware("faculty", "admin"), (req, res) => {
   return res.json({ courses });
 });
 
-router.post("/timetable", roleMiddleware("admin"), (req, res) => {
+router.post("/timetable", roleMiddleware("admin", "faculty"), (req, res) => {
   const { courseId, facultyId, dayOfWeek, startTime, endTime, roomNo } = req.body;
 
-  if (!courseId || !facultyId || !dayOfWeek || !startTime || !endTime || !roomNo) {
+  if (!courseId || !dayOfWeek || !startTime || !endTime || !roomNo || (req.user.role === "admin" && !facultyId)) {
     return res.status(400).json({ message: "Course, faculty, day, time, and classroom are required." });
   }
 
@@ -248,12 +253,27 @@ router.post("/timetable", roleMiddleware("admin"), (req, res) => {
     return res.status(400).json({ message: "End time must be later than start time." });
   }
 
-  const course = db.prepare("SELECT id, department_id FROM courses WHERE id = ?").get(Number(courseId));
+  const course = db.prepare("SELECT id, department_id, faculty_id FROM courses WHERE id = ?").get(Number(courseId));
   if (!course) {
     return res.status(404).json({ message: "Selected subject was not found." });
   }
 
-  const faculty = db.prepare("SELECT id FROM faculty WHERE id = ?").get(Number(facultyId));
+  let resolvedFacultyId = Number(facultyId);
+
+  if (req.user.role === "faculty") {
+    const facultyProfile = getFacultyProfileByUserId(req.user.id);
+    if (!facultyProfile) {
+      return res.status(404).json({ message: "Faculty profile not found." });
+    }
+
+    if (course.faculty_id && course.faculty_id !== facultyProfile.id) {
+      return res.status(403).json({ message: "You can only create timetable slots for your assigned subjects." });
+    }
+
+    resolvedFacultyId = facultyProfile.id;
+  }
+
+  const faculty = db.prepare("SELECT id FROM faculty WHERE id = ?").get(resolvedFacultyId);
   if (!faculty) {
     return res.status(404).json({ message: "Selected faculty was not found." });
   }
@@ -269,7 +289,7 @@ router.post("/timetable", roleMiddleware("admin"), (req, res) => {
           AND end_time > ?
       `
     )
-    .get(Number(facultyId), String(dayOfWeek), String(endTime), String(startTime));
+    .get(resolvedFacultyId, String(dayOfWeek), String(endTime), String(startTime));
 
   if (clash) {
     return res.status(409).json({ message: "Faculty already has a class scheduled for this time slot." });
@@ -285,7 +305,7 @@ router.post("/timetable", roleMiddleware("admin"), (req, res) => {
     .run(
       course.department_id,
       Number(courseId),
-      Number(facultyId),
+      resolvedFacultyId,
       String(dayOfWeek),
       String(startTime),
       String(endTime),

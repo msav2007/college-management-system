@@ -270,6 +270,7 @@ router.put("/subjects/:id/faculty", roleMiddleware("admin"), (req, res) => {
   }
 
   db.prepare("UPDATE courses SET faculty_id = ? WHERE id = ?").run(facultyId, subjectId);
+  db.prepare("UPDATE timetable SET faculty_id = ? WHERE course_id = ?").run(facultyId, subjectId);
   db.prepare("UPDATE faculty SET department_id = ?, branch_id = ? WHERE id = ?").run(
     subject.department_id,
     subject.branch_id,

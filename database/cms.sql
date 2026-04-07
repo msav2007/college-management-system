@@ -37,12 +37,14 @@ CREATE TABLE IF NOT EXISTS students (
   roll_number TEXT NOT NULL UNIQUE,
   registration_number TEXT NOT NULL UNIQUE,
   department_id INTEGER NOT NULL,
+  faculty_id INTEGER,
   semester INTEGER NOT NULL CHECK (semester BETWEEN 1 AND 8),
   section TEXT NOT NULL,
   advisor_faculty_id INTEGER,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
   FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE RESTRICT,
+  FOREIGN KEY (faculty_id) REFERENCES faculty (id) ON DELETE SET NULL,
   FOREIGN KEY (advisor_faculty_id) REFERENCES faculty (id) ON DELETE SET NULL
 );
 

@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
 const { db, getStudentProfileByUserId } = require("../config/db");
+const { getAssignedFacultyId, getStudentTimetable } = require("../services/studentFacultyService");
 
 const router = express.Router();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -34,6 +35,7 @@ router.get("/", roleMiddleware("admin"), (_req, res) => {
           s.semester,
           s.section,
           s.branch_id,
+          COALESCE(s.faculty_id, s.advisor_faculty_id) AS faculty_id,
           u.full_name,
           u.email,
           d.name AS department_name,
@@ -69,22 +71,27 @@ router.get("/assigned", roleMiddleware("faculty"), (req, res) => {
           s.semester,
           s.section,
           s.branch_id,
+          COALESCE(s.faculty_id, s.advisor_faculty_id) AS faculty_id,
           u.full_name,
           u.email,
           d.name AS department_name,
-          b.name AS branch_name
+          b.name AS branch_name,
+          advisor_user.full_name AS advisor_name
         FROM students s
         JOIN users u ON u.id = s.user_id
         JOIN departments d ON d.id = s.department_id
         LEFT JOIN branches b ON b.id = s.branch_id
-        JOIN courses ON courses.department_id = s.department_id
+        LEFT JOIN faculty advisor ON advisor.id = COALESCE(s.faculty_id, s.advisor_faculty_id)
+        LEFT JOIN users advisor_user ON advisor_user.id = advisor.user_id
+        LEFT JOIN courses ON courses.department_id = s.department_id
           AND COALESCE(courses.branch_id, s.branch_id) = s.branch_id
           AND courses.semester = s.semester
-        WHERE courses.faculty_id = ?
+        WHERE COALESCE(s.faculty_id, s.advisor_faculty_id) = ?
+           OR courses.faculty_id = ?
         ORDER BY u.full_name ASC
       `
     )
-    .all(facultyProfile.id);
+    .all(facultyProfile.id, facultyProfile.id);
 
   return res.json({ students });
 });
@@ -100,7 +107,8 @@ router.post("/", roleMiddleware("admin"), (req, res) => {
     section,
     rollNumber,
     registrationNumber,
-    advisorFacultyId
+    advisorFacultyId,
+    facultyId
   } = req.body;
 
   if (
@@ -149,11 +157,28 @@ router.post("/", roleMiddleware("admin"), (req, res) => {
     return res.status(409).json({ message: "Roll number or registration number already exists." });
   }
 
-  let assignedFacultyId = advisorFacultyId || null;
+  let assignedFacultyId = advisorFacultyId || facultyId || null;
+  if (assignedFacultyId) {
+    const faculty = db.prepare("SELECT id FROM faculty WHERE id = ?").get(Number(assignedFacultyId));
+    if (!faculty) {
+      return res.status(404).json({ message: "Selected faculty was not found." });
+    }
+
+    assignedFacultyId = faculty.id;
+  }
+
   if (!assignedFacultyId) {
     const faculty = db
-      .prepare("SELECT id FROM faculty WHERE department_id = ? ORDER BY id LIMIT 1")
-      .get(departmentId);
+      .prepare(
+        `
+          SELECT id
+          FROM faculty
+          WHERE department_id = ?
+          ORDER BY CASE WHEN branch_id = ? THEN 0 ELSE 1 END, id ASC
+          LIMIT 1
+        `
+      )
+      .get(departmentId, parsedBranchId || null);
     assignedFacultyId = faculty ? faculty.id : null;
   }
 
@@ -179,9 +204,10 @@ router.post("/", roleMiddleware("admin"), (req, res) => {
             branch_id,
             semester,
             section,
+            faculty_id,
             advisor_faculty_id
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `
       )
       .run(
@@ -192,6 +218,7 @@ router.post("/", roleMiddleware("admin"), (req, res) => {
         parsedBranchId,
         Number(semester),
         section.trim().toUpperCase(),
+        assignedFacultyId,
         assignedFacultyId
       );
 
@@ -208,7 +235,8 @@ router.get("/me/profile", roleMiddleware("student"), (req, res) => {
     return res.status(404).json({ message: "Student profile not found." });
   }
 
-  const advisor = student.advisor_faculty_id
+  const assignedFacultyId = getAssignedFacultyId(student);
+  const advisor = assignedFacultyId
     ? db
         .prepare(
           `
@@ -218,7 +246,7 @@ router.get("/me/profile", roleMiddleware("student"), (req, res) => {
             WHERE faculty.id = ?
           `
         )
-        .get(student.advisor_faculty_id)
+        .get(assignedFacultyId)
     : null;
 
   return res.json({
@@ -232,6 +260,8 @@ router.get("/me/profile", roleMiddleware("student"), (req, res) => {
       section: student.section,
       departmentName: student.department_name,
       branchName: student.branch_name || null,
+      facultyId: assignedFacultyId,
+      advisorFacultyId: assignedFacultyId,
       advisorName: advisor ? advisor.full_name : null
     }
   });
@@ -276,41 +306,12 @@ router.get("/me/timetable", roleMiddleware("student"), (req, res) => {
     return res.status(404).json({ message: "Student profile not found." });
   }
 
-  const timetable = db
-    .prepare(
-      `
-        SELECT
-          timetable.id,
-          timetable.day_of_week,
-          timetable.start_time,
-          timetable.end_time,
-          timetable.room_no,
-          courses.name AS course_name,
-          courses.code AS course_code,
-          faculty_users.full_name AS faculty_name
-        FROM timetable
-        JOIN courses ON courses.id = timetable.course_id
-        LEFT JOIN faculty ON faculty.id = timetable.faculty_id
-        LEFT JOIN users faculty_users ON faculty_users.id = faculty.user_id
-        WHERE timetable.department_id = ?
-          AND COALESCE(courses.branch_id, ?) = ?
-          AND courses.semester = ?
-        ORDER BY
-          CASE timetable.day_of_week
-            WHEN 'Monday' THEN 1
-            WHEN 'Tuesday' THEN 2
-            WHEN 'Wednesday' THEN 3
-            WHEN 'Thursday' THEN 4
-            WHEN 'Friday' THEN 5
-            WHEN 'Saturday' THEN 6
-            ELSE 7
-          END,
-          timetable.start_time ASC
-      `
-    )
-    .all(student.department_id, student.branch_id || null, student.branch_id || null, student.semester);
-
-  return res.json({ timetable });
+  const timetableData = getStudentTimetable(student.id);
+  return res.json({
+    timetable: timetableData.timetable,
+    facultyId: timetableData.assignedFacultyId,
+    source: timetableData.source
+  });
 });
 
 router.get("/me/fees", roleMiddleware("student"), (req, res) => {

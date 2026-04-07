@@ -189,6 +189,8 @@ function mapUserProfile(row) {
     return null;
   }
 
+  const assignedFacultyId = row.student_faculty_id || row.advisor_faculty_id || null;
+
   return {
     id: row.id,
     role: row.role,
@@ -206,7 +208,8 @@ function mapUserProfile(row) {
           registrationNumber: row.registration_number,
           semester: row.student_semester,
           section: row.section,
-          advisorFacultyId: row.advisor_faculty_id,
+          advisorFacultyId: assignedFacultyId,
+          facultyId: assignedFacultyId,
           branchId: row.student_branch_id || row.branch_id || null,
           branchName: row.student_branch_name || row.branch_name || null
         }
@@ -242,6 +245,7 @@ function getUserProfileById(userId) {
           s.registration_number,
           s.semester AS student_semester,
           s.section,
+          s.faculty_id AS student_faculty_id,
           s.advisor_faculty_id,
           s.branch_id AS student_branch_id,
           student_branch.name AS student_branch_name,
@@ -279,6 +283,7 @@ function getUserAccountByEmail(email) {
           s.registration_number,
           s.semester AS student_semester,
           s.section,
+          s.faculty_id AS student_faculty_id,
           s.advisor_faculty_id,
           s.branch_id AS student_branch_id,
           student_branch.name AS student_branch_name,
@@ -386,8 +391,17 @@ function ensureAcademicSchema() {
   ensureColumn("faculty", "branch_id", "INTEGER");
   ensureColumn("faculty", "salary_status", "TEXT NOT NULL DEFAULT 'pending'");
   ensureColumn("students", "branch_id", "INTEGER");
+  ensureColumn("students", "faculty_id", "INTEGER");
   ensureColumn("courses", "branch_id", "INTEGER");
   ensureColumn("courses", "academic_course", "TEXT NOT NULL DEFAULT 'Core Curriculum'");
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_students_faculty_id ON students (faculty_id);
+    CREATE INDEX IF NOT EXISTS idx_timetable_faculty_id ON timetable (faculty_id);
+  `);
+
+  db.prepare("UPDATE students SET faculty_id = COALESCE(faculty_id, advisor_faculty_id)").run();
+  db.prepare("UPDATE students SET advisor_faculty_id = COALESCE(advisor_faculty_id, faculty_id)").run();
 }
 
 function resolveAcademicTrack(code) {
@@ -564,16 +578,25 @@ function ensureSeedUsers() {
             branch_id,
             semester,
             section,
+            faculty_id,
             advisor_faculty_id
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `
       )
-      .run(studentUserId, "CSE2024-001", "REG2024-001", cseDepartmentId, cseBranchId, 5, "A", facultyId);
+      .run(studentUserId, "CSE2024-001", "REG2024-001", cseDepartmentId, cseBranchId, 5, "A", facultyId, facultyId);
     studentId = result.lastInsertRowid;
   } else {
-    db.prepare("UPDATE students SET department_id = ?, branch_id = COALESCE(branch_id, ?) WHERE id = ?")
-      .run(cseDepartmentId, cseBranchId, studentId);
+    db.prepare(
+      `
+        UPDATE students
+        SET department_id = ?,
+            branch_id = COALESCE(branch_id, ?),
+            faculty_id = COALESCE(faculty_id, advisor_faculty_id, ?),
+            advisor_faculty_id = COALESCE(advisor_faculty_id, faculty_id, ?)
+        WHERE id = ?
+      `
+    ).run(cseDepartmentId, cseBranchId, facultyId, facultyId, studentId);
   }
 
   db.prepare("UPDATE courses SET faculty_id = ?, department_id = ?, branch_id = COALESCE(branch_id, ?), academic_course = COALESCE(NULLIF(academic_course, ''), 'Computer Science Engineering') WHERE semester = 5 AND code LIKE 'CSE%'")

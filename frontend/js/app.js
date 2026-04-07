@@ -2064,9 +2064,32 @@ function buildSubjectOptions(subjects, { departmentId = "", branchId = "", facul
     .join("");
 }
 
+function buildFacultyAssignmentOptions(facultyList, selectedValue = "") {
+  return facultyList
+    .map((faculty) => {
+      const selected = String(selectedValue) === String(faculty.id) ? "selected" : "";
+      const descriptor = faculty.branch_name || faculty.department_name || faculty.employee_code || "Faculty";
+      return `<option value="${faculty.id}" ${selected}>${escapeHtml(faculty.full_name)} - ${escapeHtml(descriptor)}</option>`;
+    })
+    .join("");
+}
+
+async function fetchCurrentTimetableData() {
+  if (STATE.user.role === "student") {
+    const studentId = STATE.user.studentProfile?.id;
+    if (!studentId) {
+      throw new Error("Student profile is unavailable for timetable lookup.");
+    }
+
+    return api(`/timetable/${studentId}`);
+  }
+
+  return api("/faculty/timetable");
+}
+
 async function renderTimetablePageLegacy() {
   const pageContent = document.getElementById("pageContent");
-  const data = STATE.user.role === "student" ? await api("/students/me/timetable") : await api("/faculty/timetable");
+  const data = await fetchCurrentTimetableData();
   const timetable = data.timetable;
   const grouped = timetable.reduce((acc, item) => {
     acc[item.day_of_week] = acc[item.day_of_week] || [];
@@ -3240,13 +3263,17 @@ async function renderAcademicsPage() {
 async function renderTimetablePage() {
   const pageContent = document.getElementById("pageContent");
 
-  if (STATE.user.role === "admin") {
+  if (STATE.user.role !== "student") {
+    const timetablePromise = api("/faculty/timetable");
+    const coursesPromise = api("/faculty/courses");
+    const facultyPromise = STATE.user.role === "admin" ? api("/faculty") : Promise.resolve({ faculty: [] });
     const [timetableData, coursesData, facultyData] = await Promise.all([
-      api("/faculty/timetable"),
-      api("/faculty/courses"),
-      api("/faculty")
+      timetablePromise,
+      coursesPromise,
+      facultyPromise
     ]);
     const timetable = timetableData.timetable;
+    const canSelectFaculty = STATE.user.role === "admin";
 
     pageContent.innerHTML = `
       <section class="section-grid two-column">
@@ -3266,18 +3293,24 @@ async function renderTimetablePage() {
                     .join("")}
                 </select>
               </label>
-              <label class="field">
-                <span>Faculty</span>
-                <select name="facultyId" required>
-                  <option value="">Select faculty</option>
-                  ${facultyData.faculty
-                    .map(
-                      (faculty) =>
-                        `<option value="${faculty.id}">${escapeHtml(faculty.full_name)} - ${escapeHtml(faculty.employee_code)}</option>`
-                    )
-                    .join("")}
-                </select>
-              </label>
+              ${
+                canSelectFaculty
+                  ? `
+                    <label class="field">
+                      <span>Faculty</span>
+                      <select name="facultyId" required>
+                        <option value="">Select faculty</option>
+                        ${facultyData.faculty
+                          .map(
+                            (faculty) =>
+                              `<option value="${faculty.id}">${escapeHtml(faculty.full_name)} - ${escapeHtml(faculty.employee_code)}</option>`
+                          )
+                          .join("")}
+                      </select>
+                    </label>
+                  `
+                  : ""
+              }
               <label class="field">
                 <span>Day</span>
                 <select name="dayOfWeek" required>
@@ -3297,18 +3330,27 @@ async function renderTimetablePage() {
                 <span>End time</span>
                 <input type="time" name="endTime" required />
               </label>
-              <button class="button button-primary" type="submit">Create Slot</button>
+              <button class="button button-primary" type="submit">${canSelectFaculty ? "Create Slot" : "Add My Slot"}</button>
             </form>
           `
         })}
         ${panel({
           title: "Timetable overview",
-          body: createStatsGrid([
-            { label: "Slots", value: String(timetable.length), icon: "timetable" },
-            { label: "Working Days", value: String(new Set(timetable.map((item) => item.day_of_week)).size), icon: "attendance" },
-            { label: "Faculty", value: String(new Set(timetable.map((item) => item.faculty_name).filter(Boolean)).size), icon: "faculty" },
-            { label: "Subjects", value: String(new Set(timetable.map((item) => item.course_code)).size), icon: "results" }
-          ])
+          body: createStatsGrid(
+            canSelectFaculty
+              ? [
+                  { label: "Slots", value: String(timetable.length), icon: "timetable" },
+                  { label: "Working Days", value: String(new Set(timetable.map((item) => item.day_of_week)).size), icon: "attendance" },
+                  { label: "Faculty", value: String(new Set(timetable.map((item) => item.faculty_name).filter(Boolean)).size), icon: "faculty" },
+                  { label: "Subjects", value: String(new Set(timetable.map((item) => item.course_code)).size), icon: "results" }
+                ]
+              : [
+                  { label: "Slots", value: String(timetable.length), icon: "timetable" },
+                  { label: "Working Days", value: String(new Set(timetable.map((item) => item.day_of_week)).size), icon: "attendance" },
+                  { label: "Rooms", value: String(new Set(timetable.map((item) => item.room_no).filter(Boolean)).size), icon: "dashboard" },
+                  { label: "Subjects", value: String(new Set(timetable.map((item) => item.course_code)).size), icon: "results" }
+                ]
+          )
         })}
       </section>
       ${buildTimetableBoard(timetable)}
@@ -3323,7 +3365,7 @@ async function renderTimetablePage() {
           method: "POST",
           body: JSON.stringify(Object.fromEntries(formData.entries()))
         });
-        showToast("Timetable slot created successfully.");
+        showToast(canSelectFaculty ? "Timetable slot created successfully." : "Your timetable slot was added successfully.");
         await renderTimetablePage();
       } catch (error) {
         showToast(error.message, "error");
@@ -3332,7 +3374,7 @@ async function renderTimetablePage() {
     return;
   }
 
-  const data = STATE.user.role === "student" ? await api("/students/me/timetable") : await api("/faculty/timetable");
+  const data = await fetchCurrentTimetableData();
   const timetable = data.timetable;
 
   pageContent.innerHTML = `
@@ -3972,15 +4014,22 @@ async function renderStudentsPage() {
             <td>${escapeHtml(student.department_name)}<div class="muted-text">${escapeHtml(student.branch_name || "-")} - Semester ${escapeHtml(student.semester)}</div></td>
             <td>${escapeHtml(student.advisor_name || "Not assigned")}</td>
             <td>
-              <button
-                class="icon-action icon-action-danger"
-                type="button"
-                data-delete-student="${student.id}"
-                aria-label="Delete student"
-                title="Delete student"
-              >
-                ${icon("trash")}
-              </button>
+              <div class="inline-actions">
+                <select class="compact-select" data-student-faculty="${student.id}">
+                  <option value="">Select mentor</option>
+                  ${buildFacultyAssignmentOptions(facultyData.faculty, student.faculty_id)}
+                </select>
+                <button class="button button-ghost button-small" type="button" data-student-assign="${student.id}">Save</button>
+                <button
+                  class="icon-action icon-action-danger"
+                  type="button"
+                  data-delete-student="${student.id}"
+                  aria-label="Delete student"
+                  title="Delete student"
+                >
+                  ${icon("trash")}
+                </button>
+              </div>
             </td>
           </tr>
         `
@@ -4016,6 +4065,35 @@ async function renderStudentsPage() {
     } catch (error) {
       showToast(error.message, "error");
     }
+  });
+
+  document.querySelectorAll("[data-student-assign]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const studentId = button.dataset.studentAssign;
+      const select = document.querySelector(`[data-student-faculty="${studentId}"]`);
+
+      if (!select?.value) {
+        showToast("Select a faculty member first.", "error");
+        return;
+      }
+
+      button.disabled = true;
+
+      try {
+        await api("/assign-student", {
+          method: "POST",
+          body: JSON.stringify({
+            student_id: Number(studentId),
+            faculty_id: Number(select.value)
+          })
+        });
+        showToast("Student assigned successfully.");
+        await renderStudentsPage();
+      } catch (error) {
+        button.disabled = false;
+        showToast(error.message, "error");
+      }
+    });
   });
 
   document.querySelectorAll("[data-delete-student]").forEach((button) => {

@@ -17,6 +17,7 @@ const materialRoutes = require("./routes/materialRoutes");
 const noticeRoutes = require("./routes/noticeRoutes");
 const outingRoutes = require("./routes/outingRoutes");
 const academicRoutes = require("./routes/academicRoutes");
+const studentRelationshipRoutes = require("./routes/studentRelationshipRoutes");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -42,6 +43,7 @@ app.use("/uploads", express.static(uploadsDir));
 app.use(express.static(frontendDir));
 
 app.use("/api", authRoutes);
+app.use("/api", studentRelationshipRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/faculty", facultyRoutes);
 app.use("/api/attendance", attendanceRoutes);
