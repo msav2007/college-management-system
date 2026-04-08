@@ -1038,6 +1038,15 @@ async function renderFacultyPage() {
             <td class="inline-actions">
               ${statusBadge(faculty.salary_status || "pending")}
               <button class="button button-ghost button-small" type="button" data-credit-salary="${faculty.id}">Mark Credited</button>
+              <button
+                class="icon-action icon-action-danger"
+                type="button"
+                data-delete-faculty="${faculty.id}"
+                aria-label="Delete faculty"
+                title="Delete faculty"
+              >
+                ${icon("trash")}
+              </button>
             </td>
           </tr>
         `
@@ -1089,6 +1098,42 @@ async function renderFacultyPage() {
       }
     });
   });
+
+  document.querySelectorAll("[data-delete-faculty]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await deleteFaculty(button.dataset.deleteFaculty, button);
+    });
+  });
+}
+
+async function deleteFaculty(facultyId, button = null) {
+  const parsedFacultyId = Number(facultyId);
+
+  if (!parsedFacultyId) {
+    showToast("Faculty selection is invalid.", "error");
+    return;
+  }
+
+  const confirmed = window.confirm("Are you sure you want to delete this faculty? This action cannot be undone.");
+  if (!confirmed) {
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+  }
+
+  try {
+    await api(`/faculty/${parsedFacultyId}`, { method: "DELETE" });
+    button?.closest("tr")?.remove();
+    showToast("Faculty deleted successfully.");
+    await renderFacultyPage();
+  } catch (error) {
+    if (button) {
+      button.disabled = false;
+    }
+    showToast(error.message, "error");
+  }
 }
 
 async function renderAttendancePage() {
@@ -1987,6 +2032,8 @@ function buildSemesterOptions(selectedValue = "") {
 }
 
 function buildTimetableBoard(timetable, emptyMessage = "No classes scheduled for this day.") {
+  const canManageTimetable = STATE.user?.role === "admin";
+
   return `
     <section class="schedule-grid">
       ${WEEK_DAYS.map((day) => {
@@ -1997,7 +2044,14 @@ function buildTimetableBoard(timetable, emptyMessage = "No classes scheduled for
               <div class="panel-heading">
                 <h2>${escapeHtml(day)}</h2>
               </div>
-              <span class="muted-text">${entries.length} slot${entries.length === 1 ? "" : "s"}</span>
+              <div class="inline-actions">
+                <span class="muted-text">${entries.length} slot${entries.length === 1 ? "" : "s"}</span>
+                ${
+                  canManageTimetable && entries.length
+                    ? `<button class="button button-danger button-small" type="button" data-delete-day="${day}">Delete All</button>`
+                    : ""
+                }
+              </div>
             </div>
             ${
               entries.length
@@ -2016,6 +2070,21 @@ function buildTimetableBoard(timetable, emptyMessage = "No classes scheduled for
 
                         return `
                           <article class="schedule-slot">
+                            ${
+                              canManageTimetable
+                                ? `
+                                  <button
+                                    class="schedule-slot-delete"
+                                    type="button"
+                                    data-delete-slot="${entry.id}"
+                                    aria-label="Delete timetable slot"
+                                    title="Delete timetable slot"
+                                  >
+                                    ${icon("trash")}
+                                  </button>
+                                `
+                                : ""
+                            }
                             <div class="schedule-slot-time">${escapeHtml(entry.start_time)} - ${escapeHtml(entry.end_time)}</div>
                             <h3>${escapeHtml(entry.course_name)}</h3>
                             <p>${details}</p>
@@ -2031,6 +2100,80 @@ function buildTimetableBoard(timetable, emptyMessage = "No classes scheduled for
       }).join("")}
     </section>
   `;
+}
+
+function bindTimetableAdminActions() {
+  if (STATE.user?.role !== "admin") {
+    return;
+  }
+
+  document.querySelectorAll("[data-delete-slot]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await deleteTimetableSlot(button.dataset.deleteSlot, button);
+    });
+  });
+
+  document.querySelectorAll("[data-delete-day]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await deleteDaySlots(button.dataset.deleteDay, button);
+    });
+  });
+}
+
+async function deleteTimetableSlot(slotId, button = null) {
+  const parsedSlotId = Number(slotId);
+
+  if (!parsedSlotId) {
+    showToast("Timetable slot selection is invalid.", "error");
+    return;
+  }
+
+  const confirmed = window.confirm("Delete this timetable slot?");
+  if (!confirmed) {
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+  }
+
+  try {
+    await api(`/faculty/timetable/${parsedSlotId}`, { method: "DELETE" });
+    showToast("Timetable slot deleted successfully.");
+    await renderTimetablePage();
+  } catch (error) {
+    if (button) {
+      button.disabled = false;
+    }
+    showToast(error.message, "error");
+  }
+}
+
+async function deleteDaySlots(day, button = null) {
+  if (!day) {
+    showToast("Timetable day selection is invalid.", "error");
+    return;
+  }
+
+  const confirmed = window.confirm(`Delete all timetable slots for ${day}?`);
+  if (!confirmed) {
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+  }
+
+  try {
+    const response = await api(`/faculty/timetable/day/${encodeURIComponent(day)}`, { method: "DELETE" });
+    showToast(response.message || "Day timetable deleted successfully.");
+    await renderTimetablePage();
+  } catch (error) {
+    if (button) {
+      button.disabled = false;
+    }
+    showToast(error.message, "error");
+  }
 }
 
 function buildDepartmentOptionsFromData(departments, selectedValue = "") {
@@ -2138,6 +2281,8 @@ async function renderTimetablePageLegacy() {
         : emptyState("No timetable entries available.")}
     </section>
   `;
+
+  bindTimetableAdminActions();
 }
 
 async function renderFeesPageLegacy() {
@@ -3356,6 +3501,8 @@ async function renderTimetablePage() {
       ${buildTimetableBoard(timetable)}
     `;
 
+    bindTimetableAdminActions();
+
     document.getElementById("timetableCreateForm")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(event.currentTarget);
@@ -3386,6 +3533,8 @@ async function renderTimetablePage() {
     ])}
     ${buildTimetableBoard(timetable)}
   `;
+
+  bindTimetableAdminActions();
 }
 
 async function renderFeesPage() {

@@ -315,6 +315,38 @@ router.post("/timetable", roleMiddleware("admin", "faculty"), (req, res) => {
   return res.status(201).json({ message: "Timetable slot created successfully.", timetableId: result.lastInsertRowid });
 });
 
+router.delete("/timetable/day/:day", roleMiddleware("admin"), (req, res) => {
+  const dayOfWeek = String(req.params.day || "").trim();
+
+  if (!allowedDays.has(dayOfWeek)) {
+    return res.status(400).json({ message: "Selected day is invalid." });
+  }
+
+  const result = db.prepare("DELETE FROM timetable WHERE day_of_week = ?").run(dayOfWeek);
+  return res.json({
+    message: result.changes
+      ? `Deleted ${result.changes} timetable slot${result.changes === 1 ? "" : "s"} for ${dayOfWeek}.`
+      : `No timetable slots found for ${dayOfWeek}.`,
+    deletedCount: result.changes
+  });
+});
+
+router.delete("/timetable/:id", roleMiddleware("admin"), (req, res) => {
+  const timetableId = Number(req.params.id);
+
+  if (!timetableId) {
+    return res.status(400).json({ message: "Timetable slot selection is invalid." });
+  }
+
+  const slot = db.prepare("SELECT id FROM timetable WHERE id = ?").get(timetableId);
+  if (!slot) {
+    return res.status(404).json({ message: "Timetable slot not found." });
+  }
+
+  db.prepare("DELETE FROM timetable WHERE id = ?").run(timetableId);
+  return res.json({ message: "Timetable slot deleted successfully." });
+});
+
 router.get("/timetable", roleMiddleware("faculty", "admin"), (req, res) => {
   let timetable = [];
 
@@ -403,6 +435,47 @@ router.get("/profile", roleMiddleware("faculty", "admin"), (req, res) => {
   }
 
   return res.json({ faculty });
+});
+
+router.delete("/:id", roleMiddleware("admin"), (req, res) => {
+  const facultyId = Number(req.params.id);
+
+  if (!facultyId) {
+    return res.status(400).json({ message: "Faculty selection is invalid." });
+  }
+
+  const faculty = db
+    .prepare(
+      `
+        SELECT faculty.id, faculty.user_id
+        FROM faculty
+        WHERE faculty.id = ?
+      `
+    )
+    .get(facultyId);
+
+  if (!faculty) {
+    return res.status(404).json({ message: "Faculty not found." });
+  }
+
+  const deleteFacultyAccount = db.transaction(() => {
+    db.prepare("UPDATE students SET faculty_id = NULL WHERE faculty_id = ?").run(facultyId);
+    db.prepare("UPDATE students SET advisor_faculty_id = NULL WHERE advisor_faculty_id = ?").run(facultyId);
+    db.prepare("UPDATE courses SET faculty_id = NULL WHERE faculty_id = ?").run(facultyId);
+    db.prepare("UPDATE timetable SET faculty_id = NULL WHERE faculty_id = ?").run(facultyId);
+    db.prepare("UPDATE outing_requests SET reviewed_by = NULL WHERE reviewed_by = ?").run(facultyId);
+
+    db.prepare("DELETE FROM attendance WHERE faculty_id = ?").run(facultyId);
+    db.prepare("DELETE FROM results WHERE faculty_id = ?").run(facultyId);
+    db.prepare("DELETE FROM assignments WHERE faculty_id = ?").run(facultyId);
+    db.prepare("DELETE FROM materials WHERE faculty_id = ?").run(facultyId);
+
+    db.prepare("DELETE FROM faculty WHERE id = ?").run(facultyId);
+    db.prepare("DELETE FROM users WHERE id = ?").run(faculty.user_id);
+  });
+
+  deleteFacultyAccount();
+  return res.json({ message: "Faculty deleted successfully." });
 });
 
 module.exports = router;

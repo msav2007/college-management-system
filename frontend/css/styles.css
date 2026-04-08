@@ -2079,12 +2079,47 @@ body.app-page {
   border-radius: 12px;
   background: #f8fafc;
   overflow: hidden;
+  position: relative;
+  padding-right: 52px;
 }
 
 .app-page .schedule-slot-time {
   font-size: 0.8rem;
   font-weight: 700;
   color: #2563eb;
+}
+
+.app-page .schedule-slot-delete {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.app-page .schedule-slot-delete:hover {
+  background: #ef4444;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.app-page .schedule-slot-delete .nav-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.app-page .schedule-slot-delete .nav-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .app-page .schedule-slot h3 {
